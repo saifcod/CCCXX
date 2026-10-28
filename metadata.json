@@ -1,0 +1,6 @@
+{
+  "name": "CORELUX | Premium Storefront Bangladesh",
+  "description": "Premium modern retail storefront for Bangladeshi brand CORELUX featuring lifestyle, winter fashion, and verified electronics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

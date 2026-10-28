@@ -1,0 +1,248 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Registered customer profile information",
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "Full name of the customer",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of customer",
+          "minLength": 3,
+          "maxLength": 150
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when customer registered"
+        }
+      },
+      "required": ["displayName", "email"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer purchase order",
+      "type": "object",
+      "properties": {
+        "orderNumber": {
+          "type": "string",
+          "description": "Unique display order number (e.g. CL-1029)",
+          "maxLength": 30
+        },
+        "customerId": {
+          "type": "string",
+          "description": "Firebase Auth UID if customer was signed in, or empty for guest orders",
+          "maxLength": 128
+        },
+        "customerEmail": {
+          "type": "string",
+          "description": "Email address of the customer",
+          "maxLength": 150
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Full recipient name",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "customerPhone": {
+          "type": "string",
+          "description": "Bangladeshi contact phone number",
+          "minLength": 11,
+          "maxLength": 20
+        },
+        "deliveryAddress": {
+          "type": "string",
+          "description": "Detailed delivery location",
+          "minLength": 5,
+          "maxLength": 500
+        },
+        "deliveryZone": {
+          "type": "string",
+          "description": "Inside Dhaka (70 BDT) or Outside Dhaka (130 BDT)",
+          "enum": ["inside_dhaka", "outside_dhaka"]
+        },
+        "deliveryFee": {
+          "type": "number",
+          "description": "Delivery charge in BDT"
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "Order subtotal in BDT"
+        },
+        "total": {
+          "type": "number",
+          "description": "Total order amount including delivery in BDT"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment method selected by customer",
+          "enum": ["cod", "bkash"]
+        },
+        "status": {
+          "type": "string",
+          "description": "Fulfillment status of the order",
+          "enum": ["Pending Confirmation", "Confirmed", "Processing", "Shipped", "Delivered", "Cancelled", "Pending"]
+        },
+        "items": {
+          "type": "array",
+          "description": "List of products purchased in this order"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": [
+        "orderNumber",
+        "customerName",
+        "customerPhone",
+        "deliveryAddress",
+        "deliveryZone",
+        "deliveryFee",
+        "subtotal",
+        "total",
+        "paymentMethod",
+        "status",
+        "items"
+      ]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Storefront product specification and pricing",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique product ID"
+        },
+        "slug": {
+          "type": "string",
+          "description": "URL slug for product detail route"
+        },
+        "name": {
+          "type": "string",
+          "description": "Product display title"
+        },
+        "price": {
+          "type": "number",
+          "description": "Active price in BDT"
+        },
+        "priceDisplay": {
+          "type": "string",
+          "description": "Formatted price string (e.g. ৳890)"
+        },
+        "originalPrice": {
+          "type": "number",
+          "description": "Original price before discount if applicable"
+        },
+        "originalPriceDisplay": {
+          "type": "string",
+          "description": "Original price display string"
+        },
+        "discountAmount": {
+          "type": "number",
+          "description": "Discount in BDT"
+        },
+        "discountDisplay": {
+          "type": "string",
+          "description": "Formatted discount tag"
+        },
+        "image": {
+          "type": "string",
+          "description": "Image asset path or URL"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category name"
+        },
+        "isWinter": {
+          "type": "boolean",
+          "description": "Whether item belongs in Winter Collection"
+        },
+        "inStock": {
+          "type": "boolean",
+          "description": "Current inventory availability"
+        },
+        "stockStatus": {
+          "type": "string",
+          "description": "Text status badge"
+        },
+        "tagline": {
+          "type": "string",
+          "description": "Short marketing headline"
+        },
+        "description": {
+          "type": "string",
+          "description": "Full product description"
+        }
+      },
+      "required": ["id", "slug", "name", "price", "priceDisplay", "image", "category"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Admin authorization entry",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Admin email",
+          "maxLength": 150
+        },
+        "role": {
+          "type": "string",
+          "description": "Role string (e.g. owner)",
+          "maxLength": 50
+        }
+      },
+      "required": ["role"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Global storefront settings such as announcement banner",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Setting document identifier"
+        },
+        "title": {
+          "type": "string",
+          "description": "Main announcement headline"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether setting/banner is active"
+        }
+      },
+      "required": ["id", "title"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Customer profile documents, keyed by auth.uid"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Store orders placed by customers and guests"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Products catalog managed by administrators"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Owner/admin authorization lookup list"
+    },
+    "/settings/{settingId}": {
+      "schema": "Setting",
+      "description": "Storefront configuration settings and announcements"
+    }
+  }
+}

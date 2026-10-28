@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-warm: #FAF8F5;
+    --text-charcoal: #1C2024;
+    --accent-gold: #C5A059;
+    --forest-green: #143D2B;
+    --forest-green-hover: #0E2E20;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--bg-warm);
+    color: var(--text-charcoal);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+
+  /* Remove 300ms mobile tap delay and ensure responsive clicks */
+  button, a, input, select, textarea {
+    touch-action: manipulation;
+  }
+
+  /* GPU accelerated smooth scrolling */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #f1ede6;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4ccbd;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b8ab96;
+}
+
+/* Safe Area Inset Helpers for iPhone notch / home bar */
+.safe-area-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+/* TV-Style Announcement Ticker Infinite Seamless Loop */
+@keyframes tvTickerScroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-tv-ticker {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: tvTickerScroll 35s linear infinite;
+  will-change: transform;
+}
+
+.animate-tv-ticker:hover {
+  animation-play-state: paused;
+}
+

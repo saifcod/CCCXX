@@ -1,0 +1,77 @@
+# ====================================================================
+# CORELUX — Production Apache / LiteSpeed / cPanel .htaccess Configuration
+# Single Page Application (SPA) Routing & Performance Engine
+# ====================================================================
+
+# 1. Single Page Application (SPA) Routing Rewrite for LiteSpeed & Apache
+# Ensures direct URLs (e.g. /products/..., /admin, /account, /signin)
+# route seamlessly to index.html without 404 errors on refresh or link clicks.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Serve real existing files or directories directly
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Pass index.html through if already requested
+  RewriteRule ^index\.html$ - [L]
+
+  # Route all client-side routes to root index.html
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# 2. Universal Fallback for LiteSpeed Web Server and Apache
+# If mod_rewrite is restricted or bypassed, this guarantees that any 404
+# serves /index.html so React Router takes over and displays the product page.
+ErrorDocument 404 /index.html
+
+# 3. Enable GZIP Compression for Fast Mobile Loading
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/plain
+  AddOutputFilterByType DEFLATE text/html
+  AddOutputFilterByType DEFLATE text/xml
+  AddOutputFilterByType DEFLATE text/css
+  AddOutputFilterByType DEFLATE text/javascript
+  AddOutputFilterByType DEFLATE application/xml
+  AddOutputFilterByType DEFLATE application/xhtml+xml
+  AddOutputFilterByType DEFLATE application/rss+xml
+  AddOutputFilterByType DEFLATE application/javascript
+  AddOutputFilterByType DEFLATE application/x-javascript
+  AddOutputFilterByType DEFLATE application/json
+  AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# 4. Static Asset Browser Caching (Cache-Control / Expires)
+<IfModule mod_expires.c>
+  ExpiresActive On
+  
+  # HTML pages: Do not cache permanently so updates and deployments reflect instantly
+  ExpiresByType text/html "access plus 0 seconds"
+  
+  # CSS, JavaScript: Cache with revalidation
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType text/javascript "access plus 1 year"
+  
+  # Media and Images
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/x-icon "access plus 1 year"
+  
+  # Web Fonts
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType application/font-woff "access plus 1 year"
+</IfModule>
+
+# 5. Security Headers
+<IfModule mod_headers.c>
+  # Prevent MIME type sniffing
+  Header set X-Content-Type-Options "nosniff"
+  # Enable XSS protection
+  Header set X-XSS-Protection "1; mode=block"
+</IfModule>
