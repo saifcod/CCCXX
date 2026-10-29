@@ -11,15 +11,18 @@ export function normalizeProduct(raw: any, id: string): Product {
   const discountAmount = originalPrice && originalPrice > price ? originalPrice - price : raw.discountAmount;
   const discountPercentage = originalPrice && originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : raw.discountPercentage;
 
-  // Build clean images array
-  let images: string[] = [];
-  if (Array.isArray(raw.images) && raw.images.length > 0) {
-    images = raw.images.filter(Boolean);
-  } else if (raw.image) {
-    images = [raw.image];
-  }
+  // Build clean images array (1 main image + up to 3 additional images)
+  const rawPrimary = (typeof raw.image === 'string' && raw.image.trim()) ? raw.image.trim() : '';
+  const rawList: string[] = Array.isArray(raw.images)
+    ? raw.images.filter((img: any) => typeof img === 'string' && img.trim().length > 0).map((img: string) => img.trim())
+    : [];
 
-  const primaryImage = images[0] || raw.image || '/assets/aistudio/hodie_and_dropshoulder_combo_48679659.jpg';
+  const combinedList = rawPrimary
+    ? [rawPrimary, ...rawList.filter((img) => img !== rawPrimary)]
+    : (rawList.length > 0 ? rawList : ['/assets/aistudio/hodie_and_dropshoulder_combo_48679659.jpg']);
+
+  const primaryImage = combinedList[0];
+  const images = combinedList.slice(0, 4);
 
   return {
     id: id || raw.id || `prod-${Date.now()}`,

@@ -203,6 +203,7 @@ export const AdminPanel: React.FC = () => {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productForm, setProductForm] = useState<Partial<Product>>({});
+  const [additionalImages, setAdditionalImages] = useState<string[]>(['', '', '']);
   const [savingProduct, setSavingProduct] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [seedingLoading, setSeedingLoading] = useState(false);
@@ -501,6 +502,11 @@ export const AdminPanel: React.FC = () => {
     if (product) {
       setEditingProduct(product);
       setProductForm({ ...product });
+      // Extract up to 3 additional gallery images
+      const rawImages = Array.isArray(product.images) ? product.images : [];
+      const primary = product.image || rawImages[0] || '';
+      const extras = rawImages.filter((img) => img && img !== primary);
+      setAdditionalImages([extras[0] || '', extras[1] || '', extras[2] || '']);
     } else {
       setEditingProduct(null);
       setProductForm({
@@ -524,6 +530,7 @@ export const AdminPanel: React.FC = () => {
         specs: [{ label: 'Warranty', value: '7 Days Replacement' }],
         deliveryInfo: 'Cash on delivery available nationwide in Bangladesh. Delivery in 2–3 business days.',
       });
+      setAdditionalImages(['', '', '']);
     }
     setIsProductModalOpen(true);
   };
@@ -576,6 +583,13 @@ export const AdminPanel: React.FC = () => {
         { name: 'Coffee', hex: '#634735', bgClass: 'bg-[#634735]' },
       ];
 
+      const primaryImage = productForm.image?.trim() || '/assets/aistudio/mic_92c80436.webp';
+      const cleanExtras = additionalImages
+        .map((img) => img?.trim() || '')
+        .filter((img) => img.length > 0 && img !== primaryImage)
+        .slice(0, 3);
+      const allProductImages = [primaryImage, ...cleanExtras];
+
       const completeProduct: Product = {
         ...editingProduct, // Preserve all existing fields (including availableColors, etc.)
         id: productForm.id || `prod-${Date.now()}`,
@@ -589,7 +603,8 @@ export const AdminPanel: React.FC = () => {
         discountAmount,
         discountPercentage,
         discountDisplay,
-        image: productForm.image?.trim() || '/assets/aistudio/mic_92c80436.webp',
+        image: primaryImage,
+        images: allProductImages,
         category: productForm.category || 'Gadget & Tech',
         isWinter: Boolean(productForm.isWinter),
         inStock: productForm.inStock !== false,
@@ -621,7 +636,7 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
-  // Photo Upload Handler for Product Modal
+  // Photo Upload Handler for Product Modal (Primary Photo)
   const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -636,6 +651,30 @@ export const AdminPanel: React.FC = () => {
       const dataUrl = event.target?.result as string;
       setProductForm((prev) => ({ ...prev, image: dataUrl }));
       setFeedbackNotice('Photo added & preview ready!');
+      setTimeout(() => setFeedbackNotice(null), 3000);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handler for uploading one of the 3 additional gallery images
+  const handleAdditionalImageUpload = (slotIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Photo file size must be less than 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      setAdditionalImages((prev) => {
+        const next = [...prev];
+        next[slotIndex] = dataUrl;
+        return next;
+      });
+      setFeedbackNotice(`Gallery photo ${slotIndex + 1} added!`);
       setTimeout(() => setFeedbackNotice(null), 3000);
     };
     reader.readAsDataURL(file);
@@ -2665,7 +2704,7 @@ export const AdminPanel: React.FC = () => {
                           ? 'Device Photo Uploaded'
                           : productForm.image}
                       </p>
-                      <p className="text-[#707780]">Image ready for product page</p>
+                      <p className="text-[#707780]">Primary product photo</p>
                     </div>
                     <button
                       type="button"
@@ -2676,6 +2715,107 @@ export const AdminPanel: React.FC = () => {
                     </button>
                   </div>
                 )}
+              </div>
+
+              {/* Additional Gallery Photos (Up to 3 Images) */}
+              <div className="p-3 bg-[#FAF8F5] border border-[#E8E2D5] rounded-md space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block font-semibold text-[#1C2024] flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-[#143D2B]" />
+                    <span>Additional Gallery Images (Up to 3 Photos)</span>
+                  </label>
+                  <span className="text-[10px] text-[#707780]">Thumbnails & Zoom Modal</span>
+                </div>
+                <p className="text-[11px] text-[#707780]">
+                  Upload or paste image URLs for up to 3 additional photos. These will appear as interactive thumbnails underneath the main image and inside the Star Tech-style zoom lightbox modal.
+                </p>
+
+                <div className="space-y-2.5">
+                  {[0, 1, 2].map((slotIndex) => {
+                    const currentImg = additionalImages[slotIndex] || '';
+                    return (
+                      <div
+                        key={`extra-slot-${slotIndex}`}
+                        className="p-2.5 bg-white border border-[#E8E2D5] rounded-md space-y-2"
+                      >
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-[#1C2024]">
+                            Gallery Image {slotIndex + 1} <span className="text-[#707780] font-normal">(Optional)</span>
+                          </span>
+                          {currentImg && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setAdditionalImages((prev) => {
+                                  const next = [...prev];
+                                  next[slotIndex] = '';
+                                  return next;
+                                })
+                              }
+                              className="text-xs text-red-600 hover:text-red-700 font-semibold px-1.5 py-0.5 hover:bg-red-50 rounded"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                          <label
+                            htmlFor={`product-additional-photo-${slotIndex}`}
+                            className="cursor-pointer px-2.5 py-1.5 bg-[#FAF8F5] hover:bg-[#F0EBE1] text-[#143D2B] border border-[#D5CDC0] rounded text-[11px] font-semibold flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-2xs"
+                          >
+                            <Upload className="w-3 h-3 text-[#143D2B]" />
+                            <span>Upload from Device</span>
+                          </label>
+                          <input
+                            type="file"
+                            id={`product-additional-photo-${slotIndex}`}
+                            accept="image/*"
+                            onChange={(e) => handleAdditionalImageUpload(slotIndex, e)}
+                            className="hidden"
+                          />
+
+                          <input
+                            type="text"
+                            value={currentImg}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setAdditionalImages((prev) => {
+                                const next = [...prev];
+                                next[slotIndex] = val;
+                                return next;
+                              });
+                            }}
+                            placeholder="Or paste photo URL (https://... or /assets/...)"
+                            className="flex-1 px-2.5 py-1.5 bg-[#FAF8F5] border border-[#D5CDC0] rounded text-xs text-[#1C2024] focus:outline-none focus:border-[#143D2B]"
+                          />
+                        </div>
+
+                        {/* Thumbnail Preview */}
+                        {currentImg && (
+                          <div className="flex items-center gap-2.5 p-1.5 bg-[#FAF8F5] border border-[#E8E2D5] rounded">
+                            <img
+                              src={currentImg}
+                              alt={`Gallery Preview ${slotIndex + 1}`}
+                              className="w-12 h-12 object-cover rounded border border-[#E0D9CD] bg-white shrink-0"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/assets/aistudio/mic_92c80436.webp';
+                              }}
+                            />
+                            <div className="flex-1 min-w-0 text-[11px]">
+                              <p className="font-semibold text-[#1C2024] truncate">
+                                {currentImg.startsWith('data:image')
+                                  ? `Device Photo Added (Slot ${slotIndex + 1})`
+                                  : currentImg}
+                              </p>
+                              <p className="text-[10px] text-[#707780]">Ready for product gallery</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

@@ -6,6 +6,7 @@ import { useProducts } from '../context/ProductContext';
 import { ProductCard } from './ProductCard';
 import {
   ChevronLeft,
+  ChevronRight,
   Share2,
   Check,
   Truck,
@@ -17,7 +18,10 @@ import {
   RefreshCw,
   Info,
   Copy,
-  AlertCircle
+  AlertCircle,
+  X,
+  Maximize2,
+  ZoomIn,
 } from 'lucide-react';
 
 interface ProductDetailPageProps {
@@ -183,7 +187,29 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
   const [addedNotice, setAddedNotice] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Reset options when slug changes
+  // Gallery image & modal states (Star Tech style)
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState<boolean>(false);
+  const [modalImageIndex, setModalImageIndex] = useState<number>(0);
+
+  // Compute all available unique images for this product (Main + up to 3 additional)
+  const galleryImages: string[] = React.useMemo(() => {
+    if (!product) return [];
+    const list: string[] = [];
+    if (product.image && typeof product.image === 'string' && product.image.trim()) {
+      list.push(product.image.trim());
+    }
+    if (Array.isArray(product.images)) {
+      product.images.forEach((img) => {
+        if (typeof img === 'string' && img.trim() && !list.includes(img.trim())) {
+          list.push(img.trim());
+        }
+      });
+    }
+    return list.length > 0 ? list.slice(0, 4) : ['/assets/aistudio/hodie_and_dropshoulder_combo_48679659.jpg'];
+  }, [product]);
+
+  // Reset options and gallery when slug changes
   useEffect(() => {
     if (product) {
       setSelectedSize(product.requiresSize ? 'L' : '');
@@ -196,9 +222,45 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
       setCopiedLink(false);
       setAddedNotice(false);
       setValidationError(null);
+      setSelectedImageIndex(0);
+      setModalImageIndex(0);
+      setIsGalleryModalOpen(false);
       window.scrollTo(0, 0);
     }
   }, [slug, product]);
+
+  const handleOpenModal = (index: number) => {
+    setModalImageIndex(index);
+    setIsGalleryModalOpen(true);
+  };
+
+  const handlePrevModalImage = () => {
+    if (galleryImages.length <= 1) return;
+    setModalImageIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
+  };
+
+  const handleNextModalImage = () => {
+    if (galleryImages.length <= 1) return;
+    setModalImageIndex((prev) => (prev + 1) % galleryImages.length);
+  };
+
+  // Keyboard navigation for image modal (Escape, ArrowLeft, ArrowRight)
+  useEffect(() => {
+    if (!isGalleryModalOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsGalleryModalOpen(false);
+      } else if (e.key === 'ArrowLeft') {
+        setModalImageIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
+      } else if (e.key === 'ArrowRight') {
+        setModalImageIndex((prev) => (prev + 1) % galleryImages.length);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isGalleryModalOpen, galleryImages.length]);
 
   // 1. Loading State: Display premium animated skeleton while initializing or fetching from Firestore
   if (isResolving || (contextLoading && !product)) {
@@ -511,35 +573,93 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
         {/* Main Product Showcase Grid */}
         <div className="bg-white rounded-xl border border-[#E8E2D5] p-4 sm:p-8 lg:p-10 shadow-xs mb-12 sm:mb-16">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
-            {/* Left: Product Image & Badges */}
+            {/* Left: Product Image & Gallery */}
             <div className="lg:col-span-6 flex flex-col">
-              <div className="relative aspect-square w-full rounded-lg bg-[#FAF8F5] border border-[#F0EBE1] p-6 sm:p-10 flex items-center justify-center overflow-hidden">
+              {/* Main Image Container */}
+              <div
+                onClick={() => handleOpenModal(selectedImageIndex)}
+                className="group relative aspect-square w-full rounded-lg bg-[#FAF8F5] border border-[#F0EBE1] p-6 sm:p-10 flex items-center justify-center overflow-hidden cursor-zoom-in transition-all"
+                title="Click to open full-screen gallery"
+              >
                 <img
-                  src={product.image}
-                  alt={product.name}
+                  src={galleryImages[selectedImageIndex] || product.image}
+                  alt={`${product.name} - Photo ${selectedImageIndex + 1}`}
                   fetchPriority="high"
                   decoding="async"
                   width={500}
                   height={500}
-                  className="w-full h-full object-contain mix-blend-multiply"
+                  className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover:scale-105"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/assets/aistudio/mic_92c80436.webp';
+                  }}
                 />
 
                 {product.isMasterCopy && (
-                  <div className="absolute top-4 left-4 bg-[#1C2024] text-white text-xs font-medium tracking-wider px-2.5 py-1 rounded uppercase">
+                  <div className="absolute top-4 left-4 bg-[#1C2024] text-white text-xs font-medium tracking-wider px-2.5 py-1 rounded uppercase z-10 shadow-2xs">
                     Master Copy Edition
                   </div>
                 )}
 
                 {product.isWinter && (
-                  <div className="absolute top-4 right-4 bg-[#143D2B] text-white text-xs font-medium tracking-wider px-2.5 py-1 rounded uppercase">
+                  <div className="absolute top-4 right-4 bg-[#143D2B] text-white text-xs font-medium tracking-wider px-2.5 py-1 rounded uppercase z-10 shadow-2xs">
                     Winter Essential
                   </div>
                 )}
+
+                {/* Star Tech-style Zoom Prompt Overlay */}
+                <div className="absolute bottom-3 right-3 bg-white/95 hover:bg-white text-[#1C2024] border border-[#E0D9CD] shadow-xs rounded-md px-2.5 py-1.5 flex items-center gap-1.5 text-[11px] font-medium transition-all opacity-85 group-hover:opacity-100 group-hover:shadow-sm">
+                  <Maximize2 className="w-3.5 h-3.5 text-[#143D2B]" />
+                  <span>Click to Zoom</span>
+                </div>
               </div>
 
-              {/* Sub-image caption */}
-              <div className="mt-3 text-center text-[11px] text-[#8F969E]">
-                Actual product photograph by CORELUX
+              {/* Thumbnails Underneath (Only if multiple images exist) */}
+              {galleryImages.length > 1 && (
+                <div className="mt-3.5 flex items-center gap-2.5 overflow-x-auto pb-1 select-none">
+                  {galleryImages.map((imgUrl, idx) => {
+                    const isSelected = idx === selectedImageIndex;
+                    return (
+                      <button
+                        key={`product-thumb-${idx}`}
+                        type="button"
+                        onClick={() => setSelectedImageIndex(idx)}
+                        onDoubleClick={() => handleOpenModal(idx)}
+                        aria-label={`View photo ${idx + 1}`}
+                        className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg p-1.5 bg-[#FAF8F5] border transition-all shrink-0 flex items-center justify-center overflow-hidden cursor-pointer ${
+                          isSelected
+                            ? 'border-[#143D2B] ring-2 ring-[#143D2B]/25 shadow-xs bg-white scale-[1.02]'
+                            : 'border-[#E0D9CD] hover:border-[#143D2B]/50 bg-white opacity-75 hover:opacity-100'
+                        }`}
+                      >
+                        <img
+                          src={imgUrl}
+                          alt={`${product.name} thumbnail ${idx + 1}`}
+                          className="w-full h-full object-contain mix-blend-multiply"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/assets/aistudio/mic_92c80436.webp';
+                          }}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Sub-image caption with Open Gallery action */}
+              <div className="mt-3 flex items-center justify-between text-[11px] text-[#8F969E] px-1">
+                <span>Actual product photograph by CORELUX</span>
+                <button
+                  type="button"
+                  onClick={() => handleOpenModal(selectedImageIndex)}
+                  className="text-[#143D2B] font-semibold hover:underline flex items-center gap-1 transition-colors"
+                >
+                  <ZoomIn className="w-3.5 h-3.5" />
+                  <span>
+                    {galleryImages.length > 1
+                      ? `View Gallery (${galleryImages.length} Images)`
+                      : 'View Large Image'}
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -857,6 +977,115 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
           </div>
         </div>
       </div>
+
+      {/* =======================================================
+          STAR TECH INSPIRED IMAGE GALLERY MODAL / LIGHTBOX
+      ======================================================= */}
+      {isGalleryModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+          onClick={() => setIsGalleryModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl border border-stone-200 max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header: Title, Counter & Close Button */}
+            <div className="px-4 py-3 sm:px-6 sm:py-3.5 border-b border-stone-200 flex items-center justify-between bg-white z-10">
+              <div className="flex items-center gap-2.5 truncate pr-3">
+                <span className="font-bold text-sm sm:text-base text-[#1C2024] truncate">
+                  {product.name}
+                </span>
+                <span className="shrink-0 px-2.5 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E0D9CD] text-[11px] sm:text-xs font-semibold text-[#143D2B]">
+                  {modalImageIndex + 1} of {galleryImages.length}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsGalleryModalOpen(false)}
+                aria-label="Close image modal"
+                className="p-1.5 sm:p-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors shrink-0"
+              >
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            </div>
+
+            {/* Main Image Display on Clean Pure White Background */}
+            <div className="relative flex-1 bg-white min-h-[300px] sm:min-h-[460px] max-h-[62vh] flex items-center justify-center p-4 sm:p-8 overflow-hidden select-none">
+              <img
+                src={galleryImages[modalImageIndex] || galleryImages[0] || product.image}
+                alt={`${product.name} - View ${modalImageIndex + 1}`}
+                className="max-h-[56vh] max-w-full object-contain drop-shadow-xs transition-opacity duration-200"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/assets/aistudio/mic_92c80436.webp';
+                }}
+              />
+
+              {/* Previous Navigation Arrow */}
+              {galleryImages.length > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrevModalImage();
+                  }}
+                  aria-label="Previous image"
+                  className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/95 hover:bg-white text-[#1C2024] border border-stone-200 shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95 z-20"
+                >
+                  <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+                </button>
+              )}
+
+              {/* Next Navigation Arrow */}
+              {galleryImages.length > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNextModalImage();
+                  }}
+                  aria-label="Next image"
+                  className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/95 hover:bg-white text-[#1C2024] border border-stone-200 shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95 z-20"
+                >
+                  <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+                </button>
+              )}
+            </div>
+
+            {/* Bottom Thumbnail Strip (Star Tech Style) */}
+            {galleryImages.length > 1 && (
+              <div className="p-3 sm:p-4 bg-[#FAF8F5] border-t border-stone-200 flex items-center justify-center gap-2 sm:gap-3 overflow-x-auto">
+                {galleryImages.map((imgUrl, idx) => {
+                  const isActive = idx === modalImageIndex;
+                  return (
+                    <button
+                      key={`modal-thumb-${idx}`}
+                      type="button"
+                      onClick={() => setModalImageIndex(idx)}
+                      className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-lg p-1 bg-white border transition-all shrink-0 flex items-center justify-center overflow-hidden cursor-pointer ${
+                        isActive
+                          ? 'border-2 border-[#143D2B] ring-2 ring-[#143D2B]/20 shadow-xs scale-105'
+                          : 'border-stone-200 opacity-60 hover:opacity-100 hover:border-stone-400'
+                      }`}
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`Modal Thumbnail ${idx + 1}`}
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/assets/aistudio/mic_92c80436.webp';
+                        }}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
