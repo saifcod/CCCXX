@@ -12,9 +12,9 @@ export const Hero: React.FC = () => {
   const { navigate } = useRouter();
   const { heroConfig } = useProducts();
 
-  // Active slides (Maximum 3 slides enforced)
+  // Active slides (Up to 8 slides supported)
   const rawSlides = heroConfig?.slides?.filter((s) => s.isActive) || [];
-  const slides = rawSlides.length > 0 ? rawSlides.slice(0, 3) : [
+  const slides = rawSlides.length > 0 ? rawSlides.slice(0, 8) : [
     {
       id: 'default-1',
       imageUrl: '/assets/aistudio/ae200b2a-8528-4ef4-ae8b-c79087dfa79f_b451b3b7.png',

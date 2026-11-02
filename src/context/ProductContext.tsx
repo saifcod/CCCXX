@@ -145,7 +145,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
             const data = docSnap.data() as Partial<HeroConfig>;
             const freshConfig: HeroConfig = {
               slides: Array.isArray(data.slides) && data.slides.length > 0
-                ? data.slides.slice(0, 3)
+                ? data.slides.slice(0, 8)
                 : DEFAULT_HERO_CONFIG.slides,
               featuredProductIds: Array.isArray(data.featuredProductIds) && data.featuredProductIds.length >= 2
                 ? data.featuredProductIds.slice(0, 2)

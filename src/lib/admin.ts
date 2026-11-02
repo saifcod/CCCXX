@@ -159,22 +159,35 @@ export async function getFirestoreProducts(): Promise<Product[]> {
 }
 
 /**
- * Recursively strips undefined keys and values so Firestore setDoc never throws:
+ * Recursively strips undefined keys and values from objects and arrays so Firestore setDoc never throws:
  * "Unsupported field value: undefined"
  */
-export function sanitizeFirestoreData<T extends Record<string, any>>(obj: T): Record<string, any> {
-  const clean: Record<string, any> = {};
-  for (const [key, val] of Object.entries(obj)) {
-    if (val === undefined) {
-      continue;
-    }
-    if (val !== null && typeof val === 'object' && !Array.isArray(val) && !(val instanceof Date)) {
-      clean[key] = sanitizeFirestoreData(val);
-    } else {
-      clean[key] = val;
-    }
+export function sanitizeFirestoreData<T extends any>(input: T): any {
+  if (input === undefined) {
+    return null;
   }
-  return clean;
+  if (input === null) {
+    return null;
+  }
+  if (Array.isArray(input)) {
+    return input
+      .filter((item) => item !== undefined)
+      .map((item) => sanitizeFirestoreData(item));
+  }
+  if (input instanceof Date) {
+    return input;
+  }
+  if (typeof input === 'object') {
+    const clean: Record<string, any> = {};
+    for (const [key, val] of Object.entries(input)) {
+      if (val === undefined) {
+        continue;
+      }
+      clean[key] = sanitizeFirestoreData(val);
+    }
+    return clean;
+  }
+  return input;
 }
 
 export const PRODUCTS_CACHE_KEY = 'corelux_products_cache_v2';
@@ -425,7 +438,7 @@ export async function getHeroConfig(): Promise<HeroConfig> {
     if (snap.exists()) {
       const data = snap.data() as Partial<HeroConfig>;
       return {
-        slides: Array.isArray(data.slides) && data.slides.length > 0 ? data.slides.slice(0, 3) : DEFAULT_HERO_CONFIG.slides,
+        slides: Array.isArray(data.slides) && data.slides.length > 0 ? data.slides.slice(0, 8) : DEFAULT_HERO_CONFIG.slides,
         featuredProductIds: Array.isArray(data.featuredProductIds) && data.featuredProductIds.length >= 2
           ? data.featuredProductIds.slice(0, 2)
           : DEFAULT_HERO_CONFIG.featuredProductIds,
@@ -446,7 +459,21 @@ export async function getHeroConfig(): Promise<HeroConfig> {
 export async function saveHeroConfig(config: Partial<HeroConfig>): Promise<void> {
   const path = 'settings/heroConfig';
   try {
-    const cleanSlides = (config.slides || []).slice(0, 3);
+    const rawSlides = Array.isArray(config.slides) ? config.slides : [];
+    const cleanSlides: HeroSlide[] = rawSlides.slice(0, 8).map((s, idx) => {
+      const slide: Record<string, any> = {
+        id: s.id || `slide-${Date.now()}-${idx}`,
+        imageUrl: (s.imageUrl || '').trim(),
+        isActive: s.isActive !== false,
+        sortOrder: typeof s.sortOrder === 'number' ? s.sortOrder : idx + 1,
+      };
+      if (s.title && s.title.trim()) slide.title = s.title.trim();
+      if (s.subtitle && s.subtitle.trim()) slide.subtitle = s.subtitle.trim();
+      if (s.badge && s.badge.trim()) slide.badge = s.badge.trim();
+      if (s.linkUrl && s.linkUrl.trim()) slide.linkUrl = s.linkUrl.trim();
+      return slide as HeroSlide;
+    });
+
     const cleanConfig: Partial<HeroConfig> = {
       slides: cleanSlides,
       autoSlideInterval: config.autoSlideInterval || 4500,
@@ -469,6 +496,7 @@ export async function saveHeroConfig(config: Partial<HeroConfig>): Promise<void>
     updateCachedHeroConfig(cleanConfig);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+    throw error;
   }
 }
 

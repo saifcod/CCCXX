@@ -236,6 +236,8 @@ export const AdminPanel: React.FC = () => {
   // Hero Slide Modal State
   const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
   const [editingSlide, setEditingSlide] = useState<HeroSlide | null>(null);
+  const [savingSlide, setSavingSlide] = useState(false);
+  const [isUploadingSlidePhoto, setIsUploadingSlidePhoto] = useState(false);
   const [slideForm, setSlideForm] = useState<Partial<HeroSlide>>({
     imageUrl: '',
     title: '',
@@ -768,8 +770,8 @@ export const AdminPanel: React.FC = () => {
       setEditingSlide(slide);
       setSlideForm({ ...slide });
     } else {
-      if (heroSlides.length >= 3) {
-        alert('Maximum 3 banner slides allowed. Please edit or delete an existing slide.');
+      if (heroSlides.length >= 8) {
+        alert('Maximum 8 banner slides allowed. Please edit or delete an existing slide.');
         return;
       }
       setEditingSlide(null);
@@ -791,45 +793,75 @@ export const AdminPanel: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Slide image must be less than 5MB.');
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Photo file size must be less than 10MB.');
       return;
     }
 
+    setIsUploadingSlidePhoto(true);
+
     const reader = new FileReader();
+    reader.onerror = () => {
+      setIsUploadingSlidePhoto(false);
+      alert('Could not read the selected image file. Please try another image.');
+    };
+
     reader.onload = (event) => {
       const rawBase64 = event.target?.result as string;
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1920;
-        const MAX_HEIGHT = 1080;
-        let width = img.width;
-        let height = img.height;
+        try {
+          const canvas = document.createElement('canvas');
+          // Standard web banner max dimensions (1200 x 600)
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 600;
+          let width = img.width;
+          let height = img.height;
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
+          if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+            const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
           }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          const compressed = canvas.toDataURL('image/jpeg', 0.88);
-          setSlideForm((prev) => ({ ...prev, imageUrl: compressed }));
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Compress as JPEG 0.76 (keeps base64 string to ~50KB-70KB)
+            let compressed = canvas.toDataURL('image/jpeg', 0.76);
+
+            // If still over 250KB, drop quality to 0.65
+            if (compressed.length > 250000) {
+              compressed = canvas.toDataURL('image/jpeg', 0.65);
+            }
+
+            setSlideForm((prev) => ({ ...prev, imageUrl: compressed }));
+            setFeedbackNotice('Photo uploaded & optimized for banner slide!');
+            setTimeout(() => setFeedbackNotice(null), 3000);
+          } else {
+            setSlideForm((prev) => ({ ...prev, imageUrl: rawBase64 }));
+          }
+        } catch (err) {
+          console.warn('Canvas optimization fallback:', err);
+          setSlideForm((prev) => ({ ...prev, imageUrl: rawBase64 }));
+        } finally {
+          setIsUploadingSlidePhoto(false);
         }
       };
+
+      img.onerror = () => {
+        setIsUploadingSlidePhoto(false);
+        alert('Could not process this image format. Please select a JPG, PNG, or WebP photo.');
+      };
+
       img.src = rawBase64;
     };
+
     reader.readAsDataURL(file);
   };
 
@@ -840,41 +872,62 @@ export const AdminPanel: React.FC = () => {
       return;
     }
 
+    setSavingSlide(true);
+
     let updatedList: HeroSlide[];
     if (editingSlide) {
-      updatedList = heroSlides.map((s) =>
-        s.id === editingSlide.id ? ({ ...s, ...slideForm } as HeroSlide) : s
-      );
+      updatedList = heroSlides.map((s) => {
+        if (s.id !== editingSlide.id) return s;
+        const updated: HeroSlide = {
+          ...s,
+          imageUrl: (slideForm.imageUrl || s.imageUrl || '').trim(),
+          isActive: slideForm.isActive !== false,
+          sortOrder: s.sortOrder || 1,
+        };
+        if (slideForm.title?.trim()) updated.title = slideForm.title.trim();
+        else delete updated.title;
+        if (slideForm.subtitle?.trim()) updated.subtitle = slideForm.subtitle.trim();
+        else delete updated.subtitle;
+        if (slideForm.badge?.trim()) updated.badge = slideForm.badge.trim();
+        else delete updated.badge;
+        if (slideForm.linkUrl?.trim()) updated.linkUrl = slideForm.linkUrl.trim();
+        else delete updated.linkUrl;
+        return updated;
+      });
     } else {
-      if (heroSlides.length >= 3) {
-        alert('Maximum 3 banner slides allowed.');
+      if (heroSlides.length >= 8) {
+        alert('Maximum 8 banner slides allowed.');
+        setSavingSlide(false);
         return;
       }
       const newSlide: HeroSlide = {
         id: slideForm.id || `slide-${Date.now()}`,
-        imageUrl: slideForm.imageUrl.trim(),
-        title: slideForm.title?.trim() || undefined,
-        subtitle: slideForm.subtitle?.trim() || undefined,
-        badge: slideForm.badge?.trim() || undefined,
-        linkUrl: slideForm.linkUrl?.trim() || undefined,
+        imageUrl: (slideForm.imageUrl || '').trim(),
         isActive: slideForm.isActive !== false,
         sortOrder: heroSlides.length + 1,
       };
-      updatedList = [...heroSlides, newSlide].slice(0, 3);
-    }
+      if (slideForm.title?.trim()) newSlide.title = slideForm.title.trim();
+      if (slideForm.subtitle?.trim()) newSlide.subtitle = slideForm.subtitle.trim();
+      if (slideForm.badge?.trim()) newSlide.badge = slideForm.badge.trim();
+      if (slideForm.linkUrl?.trim()) newSlide.linkUrl = slideForm.linkUrl.trim();
 
-    setHeroSlides(updatedList);
-    setIsSlideModalOpen(false);
+      updatedList = [...heroSlides, newSlide].slice(0, 8);
+    }
 
     try {
       await saveHeroConfig({
         slides: updatedList,
       });
+      setHeroSlides(updatedList);
       await refreshHeroConfig();
-      setFeedbackNotice('Hero banner slide updated & saved to Firestore!');
+      setIsSlideModalOpen(false);
+      setFeedbackNotice('Hero banner slide saved successfully to Firestore!');
       setTimeout(() => setFeedbackNotice(null), 3500);
     } catch (err: any) {
-      console.error('Failed to auto-save slide to Firestore:', err);
+      console.error('Failed to save slide to Firestore:', err);
+      alert(`Could not save banner slide to Firestore: ${err?.message || 'Database error'}`);
+    } finally {
+      setSavingSlide(false);
     }
   };
 
@@ -2980,6 +3033,47 @@ export const AdminPanel: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveSlide} className="p-5 space-y-4 text-xs">
+              {/* Quick Autofill Helper: Select from existing store products */}
+              {products.length > 0 && (
+                <div className="p-3 bg-[#FAF8F5] border border-[#E8E2D5] rounded-md space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-semibold text-[#1C2024] flex items-center gap-1.5">
+                      <ShoppingBag className="w-3.5 h-3.5 text-[#143D2B]" />
+                      <span>Autofill from Store Product (Optional)</span>
+                    </label>
+                    <span className="text-[10px] text-[#707780]">Fills photo, title & link</span>
+                  </div>
+                  <select
+                    defaultValue=""
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      if (!selectedId) return;
+                      const prod = products.find((p) => p.id === selectedId);
+                      if (prod) {
+                        setSlideForm((prev) => ({
+                          ...prev,
+                          imageUrl: prod.image,
+                          title: prod.name,
+                          subtitle: prod.tagline || (prod.description ? prod.description.slice(0, 85) + '...' : ''),
+                          badge: prod.isWinter ? 'WINTER ESSENTIAL' : 'TOP FEATURED',
+                          linkUrl: `/products/${prod.slug}`,
+                        }));
+                        setFeedbackNotice(`Slide details filled from "${prod.name}"!`);
+                        setTimeout(() => setFeedbackNotice(null), 3000);
+                      }
+                    }}
+                    className="w-full px-2.5 py-2 bg-white border border-[#D5CDC0] rounded text-xs text-[#1C2024] focus:outline-none focus:border-[#143D2B]"
+                  >
+                    <option value="">-- Choose a Product to Feature in this Slide --</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.priceDisplay})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Image Upload / URL Section */}
               <div className="p-3 bg-[#FAF8F5] border border-[#E8E2D5] rounded-md space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -2992,32 +3086,64 @@ export const AdminPanel: React.FC = () => {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <label
                     htmlFor="slide-image-file-input"
-                    className="cursor-pointer px-3 py-2 bg-[#143D2B] hover:bg-[#0E2E20] text-white rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shrink-0 shadow-xs"
+                    className={`cursor-pointer px-3 py-2 bg-[#143D2B] hover:bg-[#0E2E20] text-white rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shrink-0 shadow-xs ${
+                      isUploadingSlidePhoto ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
                   >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Upload Image</span>
+                    {isUploadingSlidePhoto ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Optimizing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload Image</span>
+                      </>
+                    )}
                   </label>
                   <input
                     type="file"
                     id="slide-image-file-input"
                     accept="image/*"
+                    disabled={isUploadingSlidePhoto}
                     onChange={handleSlideImageUpload}
                     className="hidden"
                   />
 
                   <div className="relative flex-1">
-                    <input
-                      type="text"
-                      required
-                      value={slideForm.imageUrl || ''}
-                      onChange={(e) =>
-                        setSlideForm((prev) => ({ ...prev, imageUrl: e.target.value }))
-                      }
-                      placeholder="/assets/aistudio/... or https://..."
-                      className="w-full px-3 py-2 bg-white border border-[#D5CDC0] rounded-md text-[#1C2024] focus:outline-none focus:border-[#143D2B]"
-                    />
+                    {slideForm.imageUrl?.startsWith('data:image') ? (
+                      <div className="flex items-center justify-between px-3 py-2 bg-stone-100 border border-[#D5CDC0] rounded-md text-[#143D2B] font-medium text-xs">
+                        <span className="truncate">✓ Device photo uploaded & ready</span>
+                        <button
+                          type="button"
+                          onClick={() => setSlideForm((prev) => ({ ...prev, imageUrl: '' }))}
+                          className="text-red-600 hover:text-red-700 font-semibold text-xs ml-2 shrink-0"
+                        >
+                          Change
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        value={slideForm.imageUrl || ''}
+                        onChange={(e) =>
+                          setSlideForm((prev) => ({ ...prev, imageUrl: e.target.value }))
+                        }
+                        placeholder="/assets/aistudio/... or https://..."
+                        className="w-full px-3 py-2 bg-white border border-[#D5CDC0] rounded-md text-[#1C2024] focus:outline-none focus:border-[#143D2B]"
+                      />
+                    )}
                   </div>
                 </div>
+
+                {/* Uploading progress notification */}
+                {isUploadingSlidePhoto && (
+                  <div className="flex items-center gap-2 p-2 bg-[#EAF5EF] border border-[#143D2B]/20 rounded text-[#143D2B] text-[11px] font-medium">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#143D2B]" />
+                    <span>Optimizing and compressing photo for banner slider...</span>
+                  </div>
+                )}
 
                 {/* Image Live Preview */}
                 {slideForm.imageUrl && (
@@ -3030,7 +3156,8 @@ export const AdminPanel: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setSlideForm((prev) => ({ ...prev, imageUrl: '' }))}
-                      className="absolute top-2 right-2 bg-black/70 hover:bg-black text-white p-1 rounded-full text-xs"
+                      className="absolute top-2 right-2 bg-black/70 hover:bg-black text-white p-1 rounded-full text-xs shadow-xs"
+                      title="Remove image"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -3127,9 +3254,17 @@ export const AdminPanel: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#143D2B] hover:bg-[#0E2E20] text-white rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5"
+                  disabled={savingSlide || isUploadingSlidePhoto}
+                  className="px-5 py-2 bg-[#143D2B] hover:bg-[#0E2E20] text-white rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 disabled:opacity-60 transition-colors"
                 >
-                  <span>Save Slide</span>
+                  {savingSlide ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving to Firestore...</span>
+                    </>
+                  ) : (
+                    <span>Save Slide</span>
+                  )}
                 </button>
               </div>
             </form>
