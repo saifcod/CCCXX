@@ -126,55 +126,55 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#06251B] shadow-md border-b border-[#041B13]">
-      {/* Main Navigation Bar — Matching Reference Layout Exactly */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14 sm:h-16 relative">
+    <header className="fixed top-0 inset-x-0 w-full z-40 bg-[#06251B] shadow-md border-b border-[#041B13]">
+      {/* Main Navigation Bar — Fixed Across Entire Website & 100% Mobile Responsive */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 w-full">
+        <div className="flex items-center justify-between h-14 sm:h-16 relative w-full">
           
           {/* Left Column: Hamburger Menu Icon */}
-          <div className="flex items-center justify-start flex-1">
+          <div className="flex items-center justify-start shrink-0 z-10">
             <button
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Open Navigation Menu"
-              className="text-white hover:text-[#C5A059] transition-colors p-1.5 -ml-1.5 focus:outline-none flex items-center justify-center"
+              className="text-white hover:text-[#C5A059] transition-colors p-1.5 focus:outline-none flex items-center justify-center -ml-1 active:scale-95"
             >
-              <Menu className="w-6 h-6 stroke-[1.85]" />
+              <Menu className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.85]" />
             </button>
           </div>
 
           {/* Center Column: Perfectly Centered CORELUX Gold Crown + Typography */}
-          <div className="flex items-center justify-center shrink-0">
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-auto max-w-[calc(100%-130px)] sm:max-w-none">
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2.5 sm:gap-3 group focus:outline-none text-left"
+              className="flex items-center gap-2 sm:gap-3 group focus:outline-none text-left"
               aria-label="CORELUX Home"
             >
               {/* Gold Crown Emblem */}
-              <CoreluxCrown className="w-8 h-6 sm:w-9 sm:h-7 text-[#C5A059] shrink-0 transition-transform group-hover:scale-105" />
+              <CoreluxCrown className="w-7 h-5 sm:w-9 sm:h-7 text-[#C5A059] shrink-0 transition-transform group-hover:scale-105" />
 
               {/* Wordmark & Subtitle */}
               <div className="flex flex-col items-center justify-center">
-                <span className="text-white font-serif tracking-[0.22em] sm:tracking-[0.25em] text-base sm:text-lg font-bold uppercase leading-none select-none">
+                <span className="text-white font-serif tracking-[0.18em] sm:tracking-[0.25em] text-sm sm:text-base md:text-lg font-bold uppercase leading-none select-none truncate">
                   CORELUX
                 </span>
-                <div className="flex items-center justify-center gap-1.5 sm:gap-2 mt-1 w-full">
-                  <span className="w-3 sm:w-5 h-[1px] bg-[#C5A059]/80" />
-                  <span className="text-[#C5A059] text-[8px] sm:text-[9px] tracking-[0.26em] sm:tracking-[0.3em] font-semibold uppercase leading-none select-none">
+                <div className="flex items-center justify-center gap-1 sm:gap-2 mt-0.5 sm:mt-1 w-full">
+                  <span className="w-2.5 sm:w-5 h-[1px] bg-[#C5A059]/80" />
+                  <span className="text-[#C5A059] text-[7.5px] sm:text-[9px] tracking-[0.22em] sm:tracking-[0.3em] font-semibold uppercase leading-none select-none whitespace-nowrap">
                     BANGLADESH
                   </span>
-                  <span className="w-3 sm:w-5 h-[1px] bg-[#C5A059]/80" />
+                  <span className="w-2.5 sm:w-5 h-[1px] bg-[#C5A059]/80" />
                 </div>
               </div>
             </button>
           </div>
 
           {/* Right Column: Three Clean White Icons (Search, Account, Cart) */}
-          <div className="flex items-center justify-end flex-1 gap-3.5 sm:gap-5">
+          <div className="flex items-center justify-end shrink-0 z-10 gap-2 sm:gap-4 md:gap-5 pr-0.5 sm:pr-1">
             {/* 1. Search Icon Toggle */}
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
               aria-label={isSearchOpen ? 'Close Search' : 'Open Search'}
-              className="text-white hover:text-[#C5A059] transition-colors p-1 focus:outline-none flex items-center justify-center"
+              className="text-white hover:text-[#C5A059] transition-colors p-1.5 focus:outline-none flex items-center justify-center active:scale-95"
             >
               {isSearchOpen ? (
                 <X className="w-5 h-5 sm:w-[22px] sm:h-[22px] stroke-[1.85]" />
@@ -187,12 +187,12 @@ export const Header: React.FC = () => {
             <button
               onClick={handleAccountClick}
               aria-label={user ? 'My Account' : 'Sign In'}
-              className="text-white hover:text-[#C5A059] transition-colors p-1 focus:outline-none flex items-center justify-center relative"
+              className="text-white hover:text-[#C5A059] transition-colors p-1.5 focus:outline-none flex items-center justify-center relative active:scale-95"
               title={user ? (customerProfile?.displayName || user.email || 'My Account') : 'Sign In'}
             >
               <User className="w-5 h-5 sm:w-[22px] sm:h-[22px] stroke-[1.85]" />
               {user && (
-                <span className="absolute bottom-0 right-0 w-2 h-2 bg-[#22C55E] rounded-full ring-2 ring-[#06251B]" />
+                <span className="absolute bottom-1 right-1 w-2 h-2 bg-[#22C55E] rounded-full ring-2 ring-[#06251B]" />
               )}
             </button>
 
@@ -200,11 +200,11 @@ export const Header: React.FC = () => {
             <button
               onClick={openCart}
               aria-label="View Shopping Cart"
-              className="text-white hover:text-[#C5A059] transition-colors p-1 focus:outline-none flex items-center justify-center relative"
+              className="text-white hover:text-[#C5A059] transition-colors p-1.5 focus:outline-none flex items-center justify-center relative active:scale-95"
             >
               <ShoppingBag className="w-5 h-5 sm:w-[22px] sm:h-[22px] stroke-[1.85]" />
-              {/* Circular Red Badge Matching Reference Image Exactly */}
-              <span className="absolute -top-1.5 -right-2 bg-[#E11D48] text-white text-[10px] font-bold w-4 h-4 sm:w-[18px] sm:h-[18px] rounded-full flex items-center justify-center leading-none shadow-sm pointer-events-none">
+              {/* Circular Red Badge positioned cleanly within button bounds */}
+              <span className="absolute -top-1 -right-1 bg-[#E11D48] text-white text-[10px] font-bold w-4 h-4 sm:w-[18px] sm:h-[18px] rounded-full flex items-center justify-center leading-none shadow-xs pointer-events-none">
                 {totalQuantity}
               </span>
             </button>

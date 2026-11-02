@@ -6,8 +6,8 @@ export const GadgetTechSection: React.FC = () => {
   const { gadgetProducts } = useProducts();
 
   return (
-    <section id="gadget-tech" className="py-8 sm:py-10 md:py-12 bg-[#FAF8F5] scroll-mt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="gadget-tech" className="w-full max-w-full overflow-hidden py-8 sm:py-10 md:py-12 bg-[#FAF8F5] scroll-mt-16 sm:scroll-mt-20">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="mb-6 sm:mb-8 border-b border-[#E8E2D5] pb-4">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium tracking-tight text-[#1C2024] font-display">

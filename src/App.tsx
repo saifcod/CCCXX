@@ -85,12 +85,12 @@ const StorefrontContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C2024]">
-      {/* Header with Navigation, Search & Customer Account */}
+    <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C2024] w-full max-w-full overflow-x-hidden relative">
+      {/* Shared Global Fixed Header Across All Routes */}
       <Header />
 
-      {/* Main Dynamic View */}
-      <main className="flex-1">{renderMainContent()}</main>
+      {/* Main Dynamic View with Top Padding Matching Fixed Header Height */}
+      <main className="flex-1 pt-14 sm:pt-16 w-full max-w-full">{renderMainContent()}</main>
 
       {/* Cart Drawer */}
       <CartDrawer />

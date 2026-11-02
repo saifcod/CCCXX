@@ -7,8 +7,8 @@ export const Footer: React.FC = () => {
   const { navigate } = useRouter();
 
   return (
-    <footer id="contact-details" className="bg-[#1C2024] text-[#E5E7EB] pt-12 pb-8 border-t border-[#33383F]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <footer id="contact-details" className="w-full max-w-full overflow-hidden bg-[#1C2024] text-[#E5E7EB] pt-12 pb-8 border-t border-[#33383F] scroll-mt-16 sm:scroll-mt-20">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12 pb-10 border-b border-[#2E3339]">
           {/* Brand Column */}
           <div className="lg:col-span-5 space-y-4">

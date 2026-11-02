@@ -10,6 +10,9 @@
   }
 
   html {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
     text-size-adjust: 100%;
@@ -17,6 +20,8 @@
   }
 
   body {
+    width: 100%;
+    max-width: 100%;
     background-color: var(--bg-warm);
     color: var(--text-charcoal);
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
@@ -24,6 +29,13 @@
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
     touch-action: manipulation;
+    position: relative;
+  }
+
+  #root {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100vh;
   }
 
   /* Remove 300ms mobile tap delay and ensure responsive clicks */

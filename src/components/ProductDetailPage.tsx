@@ -507,8 +507,8 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
   const relatedProducts = PRODUCTS.filter((p) => p.id !== product.id).slice(0, 4);
 
   return (
-    <div className="bg-[#FAF8F5] min-h-screen py-6 sm:py-10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full max-w-full overflow-hidden bg-[#FAF8F5] min-h-screen py-6 sm:py-10">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb Navigation & Share Button */}
         <div className="flex items-center justify-between gap-4 mb-6 text-xs text-[#7A828B]">
           <div className="flex items-center gap-2 flex-wrap">

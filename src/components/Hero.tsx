@@ -82,9 +82,9 @@ export const Hero: React.FC = () => {
   };
 
   return (
-    <section className="bg-[#FAF8F5] border-b border-[#E8E2D5] overflow-hidden">
+    <section className="w-full max-w-full bg-[#FAF8F5] border-b border-[#E8E2D5] overflow-hidden">
       {/* 1. HERO AUTO-SLIDING BANNER CAROUSEL (Max 3 slides) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div
           className="relative rounded-2xl overflow-hidden bg-black shadow-md border border-[#E0D9CD] group"
           onMouseEnter={() => setIsPaused(true)}
@@ -209,9 +209,9 @@ export const Hero: React.FC = () => {
           ? [...rawSegments, ...rawSegments, ...rawSegments]
           : rawSegments;
 
-        return (
-          <div className="w-full bg-white border-y border-[#E5E7EB] select-none">
-            <div className="max-w-7xl mx-auto border-x border-[#E5E7EB] overflow-hidden py-2 sm:py-2.5 relative flex items-center">
+          return (
+            <div className="w-full max-w-full bg-white border-y border-[#E5E7EB] select-none overflow-hidden">
+              <div className="w-full max-w-7xl mx-auto border-x border-[#E5E7EB] overflow-hidden py-2 sm:py-2.5 relative flex items-center">
               {/* Subtle Edge Fade Overlays (pure white) */}
               <div className="absolute left-0 inset-y-0 w-6 sm:w-10 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
               <div className="absolute right-0 inset-y-0 w-6 sm:w-10 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
