@@ -107,7 +107,7 @@ const StorefrontContent: React.FC = () => {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Order or Chat on WhatsApp"
-        className="fixed bottom-5 left-5 z-30 bg-[#25D366] hover:bg-[#1EBE5D] text-white p-3.5 rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center group active:scale-95"
+        className="fixed bottom-5 left-5 z-30 bg-[#25D366] hover:bg-[#1EBE5D] text-white p-3.5 rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center group active:scale-95 animate-whatsapp-entrance"
       >
         <MessageCircle className="w-6 h-6" />
         <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-300 ease-in-out text-xs font-semibold pl-0 group-hover:pl-2">

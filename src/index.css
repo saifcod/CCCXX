@@ -95,3 +95,20 @@
   animation-play-state: paused;
 }
 
+/* WhatsApp Floating Button Subtle Entrance Animation (Fade & Slide Up) */
+@keyframes whatsappEntrance {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.animate-whatsapp-entrance {
+  animation: whatsappEntrance 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.35s backwards;
+  will-change: transform, opacity;
+}
+

@@ -95,5 +95,23 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // Customer product reviews & ratings
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if (
+        incoming().rating is number &&
+        incoming().rating >= 1 &&
+        incoming().rating <= 5 &&
+        incoming().productId is string &&
+        incoming().productId.size() > 0 &&
+        incoming().productId.size() <= 128 &&
+        incoming().comment is string &&
+        incoming().comment.size() <= 2000 &&
+        incoming().userName is string &&
+        incoming().userName.size() <= 100
+      );
+      allow update, delete: if isAdmin();
+    }
   }
 }

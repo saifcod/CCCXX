@@ -221,6 +221,71 @@
         }
       },
       "required": ["id", "title"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Customer product ratings and reviews",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique review identifier"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Referenced product ID",
+          "maxLength": 128
+        },
+        "productSlug": {
+          "type": "string",
+          "description": "Product URL slug",
+          "maxLength": 150
+        },
+        "rating": {
+          "type": "number",
+          "description": "Star rating between 1 and 5"
+        },
+        "userName": {
+          "type": "string",
+          "description": "Reviewer display name",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Reviewer email address",
+          "maxLength": 150
+        },
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID if signed in",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "description": "Review headline or title",
+          "maxLength": 150
+        },
+        "comment": {
+          "type": "string",
+          "description": "Review feedback comment",
+          "minLength": 2,
+          "maxLength": 2000
+        },
+        "recommend": {
+          "type": "boolean",
+          "description": "Whether user recommends the product"
+        },
+        "isVerifiedPurchase": {
+          "type": "boolean",
+          "description": "Verified buyer status"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp in ISO format"
+        }
+      },
+      "required": ["productId", "rating", "userName", "comment", "createdAt"]
     }
   },
   "firestore": {
@@ -243,6 +308,10 @@
     "/settings/{settingId}": {
       "schema": "Setting",
       "description": "Storefront configuration settings and announcements"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Customer product reviews and ratings"
     }
   }
 }

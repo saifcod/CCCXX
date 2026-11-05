@@ -17,12 +17,13 @@ import {
   Phone,
   RefreshCw,
   Info,
-  Copy,
   AlertCircle,
   X,
   Maximize2,
   ZoomIn,
+  Star,
 } from 'lucide-react';
+import { ProductReviewsSection } from './ProductReviewsSection';
 
 interface ProductDetailPageProps {
   slug: string;
@@ -681,9 +682,30 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
                   )}
                 </div>
 
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-[#1C2024] font-sans mb-3 leading-snug tracking-tight">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-[#1C2024] font-sans mb-2 leading-snug tracking-tight">
                   {product.name}
                 </h1>
+
+                {/* Quick Star Rating Anchor */}
+                <div className="flex items-center gap-2 mb-3">
+                  <a
+                    href="#product-reviews-section"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById('product-reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="inline-flex items-center gap-1.5 group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-0.5 text-[#C5A059]">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} className="w-3.5 h-3.5 fill-[#C5A059]" />
+                      ))}
+                    </div>
+                    <span className="text-xs font-semibold text-[#1C2024] group-hover:text-[#143D2B] group-hover:underline">
+                      Verified Ratings
+                    </span>
+                  </a>
+                </div>
 
                 {/* Price Display with Discount */}
                 <div className="flex flex-wrap items-baseline gap-2 sm:gap-3 mb-5 pb-4 border-b border-[#F0EBE1]">
@@ -894,6 +916,9 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
             </div>
           </div>
         )}
+
+        {/* Customer Star-Rating and Review Submission Section */}
+        <ProductReviewsSection product={product} />
 
         {/* Key Features Checklist */}
         {product.features && product.features.length > 0 && (
