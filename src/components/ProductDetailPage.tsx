@@ -717,10 +717,12 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
                   </div>
                 )}
 
-                {/* Short Tagline / Summary */}
-                <p className="text-xs sm:text-sm text-[#4E555D] leading-relaxed mb-6">
-                  {product.description}
-                </p>
+                {/* Short Tagline */}
+                {product.tagline && (
+                  <p className="text-xs sm:text-sm text-[#5D646D] font-medium mb-5 leading-relaxed">
+                    {product.tagline}
+                  </p>
+                )}
 
                 {/* WINTER REQUIREMENT 1: Size Selector for Hoodies */}
                 {product.requiresSize && (
@@ -868,14 +870,38 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
           </div>
         </div>
 
-        {/* Detailed Specs and Features Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-16">
-          {/* Key Features Checklist */}
-          <div className="lg:col-span-6 bg-white rounded-xl border border-[#E8E2D5] p-6 sm:p-8">
+        {/* Dedicated Full-Width Product Description Section */}
+        {product.description && (
+          <div className="bg-white rounded-xl border border-[#E8E2D5] p-6 sm:p-8 lg:p-10 shadow-xs mb-8 sm:mb-12">
+            <div className="border-b border-[#F0EBE1] pb-4 mb-6 sm:mb-7 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-1.5 h-6 bg-[#C5A059] rounded-full" />
+                <h2 className="text-xl sm:text-2xl font-bold font-display text-[#1C2024] tracking-tight">
+                  Product Description
+                </h2>
+              </div>
+              <span className="text-[11px] font-semibold text-[#8C6D2D] tracking-wider uppercase hidden sm:inline-block">
+                CORELUX Verified Specification
+              </span>
+            </div>
+
+            <div className="text-[#3F444A] text-sm sm:text-base leading-relaxed sm:leading-loose space-y-4 max-w-4xl">
+              {product.description.split(/\n+/).map((paragraph, idx) => (
+                <p key={idx} className="text-[#3F444A] leading-relaxed sm:leading-loose">
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Key Features Checklist */}
+        {product.features && product.features.length > 0 && (
+          <div className="bg-white rounded-xl border border-[#E8E2D5] p-6 sm:p-8 mb-16 shadow-xs max-w-4xl mx-auto">
             <h3 className="text-lg font-semibold text-[#1C2024] font-display mb-4">
               Key Features & Performance
             </h3>
-            <ul className="space-y-3">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {product.features.map((feat, idx) => (
                 <li key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-[#4E555D]">
                   <span className="w-5 h-5 rounded-full bg-[#EAF5EF] text-[#143D2B] flex items-center justify-center shrink-0 mt-0.5">
@@ -885,32 +911,13 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug }) =>
                 </li>
               ))}
             </ul>
-          </div>
-
-          {/* Specifications Table */}
-          <div className="lg:col-span-6 bg-white rounded-xl border border-[#E8E2D5] p-6 sm:p-8">
-            <h3 className="text-lg font-semibold text-[#1C2024] font-display mb-4">
-              Detailed Specifications
-            </h3>
-            <div className="divide-y divide-[#F0EBE1]">
-              {product.specs.map((spec, idx) => (
-                <div key={idx} className="py-2.5 flex items-start justify-between text-xs sm:text-sm gap-4">
-                  <span className="font-medium text-[#707780] w-1/3 shrink-0">
-                    {spec.label}
-                  </span>
-                  <span className="font-semibold text-[#1C2024] text-right w-2/3">
-                    {spec.value}
-                  </span>
-                </div>
-              ))}
-            </div>
 
             <div className="mt-6 pt-4 border-t border-[#F0EBE1] flex items-center gap-2 text-xs text-[#8C6D2D]">
               <ShieldCheck className="w-4 h-4 text-[#C5A059] shrink-0" />
               <span>Inspection allowed at doorstep before payment.</span>
             </div>
           </div>
-        </div>
+        )}
 
         {/* More Products / Related Section (2 columns on mobile strictly) */}
         <div className="border-t border-[#E8E2D5] pt-12">

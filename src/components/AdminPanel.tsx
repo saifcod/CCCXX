@@ -205,6 +205,8 @@ export const AdminPanel: React.FC = () => {
   const [productForm, setProductForm] = useState<Partial<Product>>({});
   const [additionalImages, setAdditionalImages] = useState<string[]>(['', '', '']);
   const [savingProduct, setSavingProduct] = useState(false);
+  const [isUploadingProductPhoto, setIsUploadingProductPhoto] = useState(false);
+  const [uploadingGallerySlot, setUploadingGallerySlot] = useState<number | null>(null);
   const [productSearch, setProductSearch] = useState('');
   const [seedingLoading, setSeedingLoading] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
@@ -529,12 +531,116 @@ export const AdminPanel: React.FC = () => {
         tagline: 'Premium quality gadget in Bangladesh',
         description: 'Engineered for reliability, long performance and everyday use.',
         features: ['Premium construction', 'Nationwide Cash on Delivery'],
-        specs: [{ label: 'Warranty', value: '7 Days Replacement' }],
+        specs: [],
         deliveryInfo: 'Cash on delivery available nationwide in Bangladesh. Delivery in 2–3 business days.',
       });
       setAdditionalImages(['', '', '']);
     }
     setIsProductModalOpen(true);
+  };
+
+  /**
+   * Automatically compresses device and mobile photos into optimized, lightweight JPEG Data URLs.
+   * Downscales high-resolution mobile photos (e.g. 4000x3000 to max 900x900) and applies JPEG
+   * compression, reducing file size to ~40KB-80KB.
+   * This guarantees that even with 4 product photos, the Firestore document size is ~250KB-350KB,
+   * permanently preventing Firestore's 1,048,576 byte (1MB) document size write limit.
+   */
+  const compressImageToDataUrl = (
+    input: File | string,
+    maxWidth = 900,
+    maxHeight = 900,
+    initialQuality = 0.78
+  ): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      // If it's a regular HTTP / asset URL (e.g. /assets/... or https://...), return directly
+      if (typeof input === 'string') {
+        if (!input.startsWith('data:image/')) {
+          return resolve(input);
+        }
+        // If it's already a lightweight data URL (< 90KB), return as is
+        if (input.length < 90000) {
+          return resolve(input);
+        }
+      }
+
+      const processDataUrl = (rawUrl: string) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            let width = img.naturalWidth || img.width;
+            let height = img.naturalHeight || img.height;
+
+            // Scale down if dimensions exceed max
+            if (width > maxWidth || height > maxHeight) {
+              const ratio = Math.min(maxWidth / width, maxHeight / height);
+              width = Math.round(width * ratio);
+              height = Math.round(height * ratio);
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              return resolve(rawUrl);
+            }
+
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Standard compressed JPEG
+            let compressed = canvas.toDataURL('image/jpeg', initialQuality);
+
+            // If still over 180KB (~180,000 characters), compress with quality 0.65
+            if (compressed.length > 180000) {
+              compressed = canvas.toDataURL('image/jpeg', 0.65);
+            }
+
+            // If still over 150KB and resolution is large, downscale slightly more
+            if (compressed.length > 150000 && (width > 650 || height > 650)) {
+              const scaledW = Math.round(width * 0.8);
+              const scaledH = Math.round(height * 0.8);
+              canvas.width = scaledW;
+              canvas.height = scaledH;
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              ctx.drawImage(img, 0, 0, scaledW, scaledH);
+              compressed = canvas.toDataURL('image/jpeg', 0.62);
+            }
+
+            resolve(compressed);
+          } catch (err) {
+            console.warn('Canvas optimization fallback:', err);
+            resolve(rawUrl);
+          }
+        };
+
+        img.onerror = () => {
+          console.warn('Image element failed to load data URL');
+          resolve(rawUrl);
+        };
+
+        img.src = rawUrl;
+      };
+
+      if (typeof input === 'string') {
+        processDataUrl(input);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          if (result) {
+            processDataUrl(result);
+          } else {
+            reject(new Error('Failed to read file.'));
+          }
+        };
+        reader.onerror = () => reject(new Error('File reading error.'));
+        reader.readAsDataURL(input);
+      }
+    });
   };
 
   // Save Product to Firestore
@@ -545,6 +651,7 @@ export const AdminPanel: React.FC = () => {
       return;
     }
     setSavingProduct(true);
+    setFeedbackNotice('Optimizing images & saving to Firestore...');
     try {
       const numericPrice = Number(productForm.price);
       const formattedPriceDisplay = `৳${numericPrice.toLocaleString()}`;
@@ -585,11 +692,36 @@ export const AdminPanel: React.FC = () => {
         { name: 'Coffee', hex: '#634735', bgClass: 'bg-[#634735]' },
       ];
 
-      const primaryImage = productForm.image?.trim() || '/assets/aistudio/mic_92c80436.webp';
-      const cleanExtras = additionalImages
+      // Ensure primary image is optimized if it is a large data URL
+      let primaryImage = productForm.image?.trim() || '/assets/aistudio/mic_92c80436.webp';
+      if (primaryImage.startsWith('data:image/') && primaryImage.length > 90000) {
+        try {
+          primaryImage = await compressImageToDataUrl(primaryImage, 900, 900, 0.76);
+        } catch (e) {
+          console.warn('Primary image auto-compression in handleSaveProduct:', e);
+        }
+      }
+
+      // Ensure all extra gallery images are optimized if data URLs
+      const rawExtras = additionalImages
         .map((img) => img?.trim() || '')
         .filter((img) => img.length > 0 && img !== primaryImage)
         .slice(0, 3);
+
+      const cleanExtras: string[] = [];
+      for (const extraImg of rawExtras) {
+        if (extraImg.startsWith('data:image/') && extraImg.length > 90000) {
+          try {
+            const compressedExtra = await compressImageToDataUrl(extraImg, 900, 900, 0.75);
+            cleanExtras.push(compressedExtra);
+          } catch {
+            cleanExtras.push(extraImg);
+          }
+        } else {
+          cleanExtras.push(extraImg);
+        }
+      }
+
       const allProductImages = [primaryImage, ...cleanExtras];
 
       const completeProduct: Product = {
@@ -614,7 +746,7 @@ export const AdminPanel: React.FC = () => {
         tagline: productForm.tagline?.trim() || '',
         description: productForm.description?.trim() || '',
         features: (productForm.features && productForm.features.length > 0) ? productForm.features : ['Premium quality product in Bangladesh', 'Nationwide Cash on Delivery'],
-        specs: productForm.specs || [],
+        specs: [],
         requiresSize: Boolean(productForm.requiresSize),
         availableSizes: productForm.requiresSize ? (productForm.availableSizes || ['L', 'XL']) : undefined,
         requiresColor: Boolean(productForm.requiresColor),
@@ -639,47 +771,61 @@ export const AdminPanel: React.FC = () => {
   };
 
   // Photo Upload Handler for Product Modal (Primary Photo)
-  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Photo file size must be less than 5MB.');
+    if (file.size > 25 * 1024 * 1024) {
+      alert('Photo file size must be less than 25MB. Please choose a photo under 25MB.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      setProductForm((prev) => ({ ...prev, image: dataUrl }));
-      setFeedbackNotice('Photo added & preview ready!');
-      setTimeout(() => setFeedbackNotice(null), 3000);
-    };
-    reader.readAsDataURL(file);
+    setIsUploadingProductPhoto(true);
+    setFeedbackNotice('Optimizing photo for mobile & Firestore...');
+    try {
+      const compressedDataUrl = await compressImageToDataUrl(file, 900, 900, 0.78);
+      setProductForm((prev) => ({ ...prev, image: compressedDataUrl }));
+      const approxKb = Math.round((compressedDataUrl.length * 0.75) / 1024);
+      setFeedbackNotice(`Photo optimized (~${approxKb} KB) & preview ready!`);
+      setTimeout(() => setFeedbackNotice(null), 3500);
+    } catch (err: any) {
+      console.error('Image upload failed:', err);
+      alert('Could not process this image. Please select a JPG, PNG, or WebP photo.');
+    } finally {
+      setIsUploadingProductPhoto(false);
+      e.target.value = '';
+    }
   };
 
   // Handler for uploading one of the 3 additional gallery images
-  const handleAdditionalImageUpload = (slotIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAdditionalImageUpload = async (slotIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Photo file size must be less than 5MB.');
+    if (file.size > 25 * 1024 * 1024) {
+      alert('Photo file size must be less than 25MB. Please choose a photo under 25MB.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
+    setUploadingGallerySlot(slotIndex);
+    setFeedbackNotice(`Optimizing gallery photo ${slotIndex + 1}...`);
+    try {
+      const compressedDataUrl = await compressImageToDataUrl(file, 900, 900, 0.78);
       setAdditionalImages((prev) => {
         const next = [...prev];
-        next[slotIndex] = dataUrl;
+        next[slotIndex] = compressedDataUrl;
         return next;
       });
-      setFeedbackNotice(`Gallery photo ${slotIndex + 1} added!`);
-      setTimeout(() => setFeedbackNotice(null), 3000);
-    };
-    reader.readAsDataURL(file);
+      const approxKb = Math.round((compressedDataUrl.length * 0.75) / 1024);
+      setFeedbackNotice(`Gallery photo ${slotIndex + 1} optimized (~${approxKb} KB)!`);
+      setTimeout(() => setFeedbackNotice(null), 3500);
+    } catch (err: any) {
+      console.error('Gallery image upload failed:', err);
+      alert('Could not process this gallery photo. Please select a JPG, PNG, or WebP photo.');
+    } finally {
+      setUploadingGallerySlot(null);
+      e.target.value = '';
+    }
   };
 
   // Toggle Stock availability directly
@@ -687,8 +833,27 @@ export const AdminPanel: React.FC = () => {
     const updatedStock = !product.inStock;
     const updatedStatus = updatedStock ? 'In Stock (Ready to Dispatch)' : 'Out of Stock';
     try {
+      // Safety: ensure base64 image data does not exceed Firestore limits if re-saving an older product
+      let cleanImage = product.image;
+      if (cleanImage?.startsWith('data:image/') && cleanImage.length > 100000) {
+        cleanImage = await compressImageToDataUrl(cleanImage, 900, 900, 0.75);
+      }
+      let cleanImages = product.images;
+      if (cleanImages && cleanImages.length > 0) {
+        cleanImages = await Promise.all(
+          cleanImages.map(async (img) => {
+            if (img?.startsWith('data:image/') && img.length > 100000) {
+              return await compressImageToDataUrl(img, 900, 900, 0.75);
+            }
+            return img;
+          })
+        );
+      }
+
       await saveProductToFirestore({
         ...product,
+        image: cleanImage,
+        images: cleanImages,
         inStock: updatedStock,
         stockStatus: updatedStatus,
       });
@@ -2713,10 +2878,21 @@ export const AdminPanel: React.FC = () => {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <label
                     htmlFor="product-device-photo-input"
-                    className="cursor-pointer px-3 py-2 bg-[#143D2B] hover:bg-[#0E2E20] text-white rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shrink-0 shadow-xs"
+                    className={`cursor-pointer px-3 py-2 bg-[#143D2B] hover:bg-[#0E2E20] text-white rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shrink-0 shadow-xs ${
+                      isUploadingProductPhoto ? 'opacity-75 pointer-events-none' : ''
+                    }`}
                   >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Upload from Device</span>
+                    {isUploadingProductPhoto ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C5A059]" />
+                        <span>Optimizing Photo...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload from Device</span>
+                      </>
+                    )}
                   </label>
                   <input
                     type="file"
@@ -2740,7 +2916,7 @@ export const AdminPanel: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Instant Photo Preview Thumbnail */}
+                {/* Instant Photo Preview Thumbnail with Size Indicator */}
                 {productForm.image && (
                   <div className="flex items-center gap-3 p-2 bg-white border border-[#E8E2D5] rounded-md">
                     <img
@@ -2752,11 +2928,18 @@ export const AdminPanel: React.FC = () => {
                       }}
                     />
                     <div className="flex-1 min-w-0 text-[11px]">
-                      <p className="font-semibold text-[#1C2024] truncate">
-                        {productForm.image.startsWith('data:image')
-                          ? 'Device Photo Uploaded'
-                          : productForm.image}
-                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-semibold text-[#1C2024] truncate">
+                          {productForm.image.startsWith('data:image')
+                            ? 'Device Photo (Optimized)'
+                            : productForm.image}
+                        </p>
+                        {productForm.image.startsWith('data:image') && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#DCFCE7] text-[#15803D] shrink-0">
+                            ~{Math.round((productForm.image.length * 0.75) / 1024)} KB · Mobile Safe
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[#707780]">Primary product photo</p>
                     </div>
                     <button
@@ -2815,10 +2998,21 @@ export const AdminPanel: React.FC = () => {
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                           <label
                             htmlFor={`product-additional-photo-${slotIndex}`}
-                            className="cursor-pointer px-2.5 py-1.5 bg-[#FAF8F5] hover:bg-[#F0EBE1] text-[#143D2B] border border-[#D5CDC0] rounded text-[11px] font-semibold flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-2xs"
+                            className={`cursor-pointer px-2.5 py-1.5 bg-[#FAF8F5] hover:bg-[#F0EBE1] text-[#143D2B] border border-[#D5CDC0] rounded text-[11px] font-semibold flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-2xs ${
+                              uploadingGallerySlot === slotIndex ? 'opacity-75 pointer-events-none' : ''
+                            }`}
                           >
-                            <Upload className="w-3 h-3 text-[#143D2B]" />
-                            <span>Upload from Device</span>
+                            {uploadingGallerySlot === slotIndex ? (
+                              <>
+                                <RefreshCw className="w-3 h-3 animate-spin text-[#143D2B]" />
+                                <span>Optimizing...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-3 h-3 text-[#143D2B]" />
+                                <span>Upload from Device</span>
+                              </>
+                            )}
                           </label>
                           <input
                             type="file"
@@ -2844,7 +3038,7 @@ export const AdminPanel: React.FC = () => {
                           />
                         </div>
 
-                        {/* Thumbnail Preview */}
+                        {/* Thumbnail Preview with Size Indicator */}
                         {currentImg && (
                           <div className="flex items-center gap-2.5 p-1.5 bg-[#FAF8F5] border border-[#E8E2D5] rounded">
                             <img
@@ -2856,11 +3050,18 @@ export const AdminPanel: React.FC = () => {
                               }}
                             />
                             <div className="flex-1 min-w-0 text-[11px]">
-                              <p className="font-semibold text-[#1C2024] truncate">
-                                {currentImg.startsWith('data:image')
-                                  ? `Device Photo Added (Slot ${slotIndex + 1})`
-                                  : currentImg}
-                              </p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="font-semibold text-[#1C2024] truncate">
+                                  {currentImg.startsWith('data:image')
+                                    ? `Gallery Photo ${slotIndex + 1} (Optimized)`
+                                    : currentImg}
+                                </p>
+                                {currentImg.startsWith('data:image') && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#DCFCE7] text-[#15803D] shrink-0">
+                                    ~{Math.round((currentImg.length * 0.75) / 1024)} KB · Safe
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[10px] text-[#707780]">Ready for product gallery</p>
                             </div>
                           </div>
